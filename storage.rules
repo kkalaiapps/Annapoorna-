@@ -1,0 +1,20 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function profile() { return firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data; }
+    function l1() { return request.auth != null && profile().role in ['L1', 'L2', 'L3']; }
+    function l2() { return request.auth != null && profile().role in ['L2', 'L3']; }
+    function isImage() { return request.resource.contentType.matches('image/.*') && request.resource.size < 10 * 1024 * 1024; }
+
+    // Photos of sales reports, cash out, vendor bills, wastage. Write once, never overwritten.
+    match /entries/{entryId}/{file} {
+      allow read: if l1();
+      allow create: if l1() && isImage();
+    }
+    // Bank-paid screenshots for vendor bills.
+    match /payments/{entryId}/{file} {
+      allow read: if l2();
+      allow create: if l2() && isImage();
+    }
+  }
+}

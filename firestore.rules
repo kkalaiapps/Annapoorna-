@@ -1,0 +1,63 @@
+rules_version = '2';
+// Access levels: L1 records entries, L2 verifies/edits bills and payments, L3 admin approves users.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null && request.auth.token.email_verified == true; }
+    function me() { return get(/databases/$(database)/documents/users/$(request.auth.uid)).data; }
+    function hasProfile() { return signedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)); }
+    function role() { return me().role; }
+    function l1() { return hasProfile() && role() in ['L1', 'L2', 'L3']; }
+    function l2() { return hasProfile() && role() in ['L2', 'L3']; }
+    function l3() { return hasProfile() && role() == 'L3'; }
+    function email() { return request.auth.token.email.lower(); }
+    function onlyChanges(keys) { return request.resource.data.diff(resource.data).affectedKeys().hasOnly(keys); }
+
+    match /users/{uid} {
+      allow read: if signedIn() && (uid == request.auth.uid || l3());
+      // First sign-in: create own profile. Role must be pending, unless it is the bootstrap admin or the email was pre-approved.
+      allow create: if signedIn() && uid == request.auth.uid
+        && request.resource.data.email == email()
+        && (
+          request.resource.data.role == 'pending'
+          || (email() == 'kkalai@gmail.com' && request.resource.data.role == 'L3')
+          || (exists(/databases/$(database)/documents/invites/$(email()))
+              && get(/databases/$(database)/documents/invites/$(email())).data.role == request.resource.data.role)
+        );
+      allow update: if (l3() && resource.data.email != 'kkalai@gmail.com')
+        || (signedIn() && uid == request.auth.uid && onlyChanges(['name', 'photoURL']));
+      allow delete: if l3() && resource.data.email != 'kkalai@gmail.com';
+    }
+
+    match /invites/{inviteEmail} {
+      allow read: if (signedIn() && inviteEmail == email()) || l3();
+      allow write: if l3();
+    }
+
+    match /entries/{id} {
+      allow read: if l2() || (l1() && resource.data.createdBy == request.auth.uid);
+      allow create: if l1()
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.status == 'processing'
+        && request.resource.data.type in ['sales', 'cashout', 'vendor_bill', 'wastage']
+        && request.resource.data.date is string
+        && request.resource.data.photoPaths is list && request.resource.data.photoPaths.size() > 0;
+      // Level 2 verifies and edits. Nobody can change who recorded it or the original photos.
+      allow update: if l2() && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['createdBy', 'createdAt', 'photoPaths', 'type']);
+      allow delete: if l3();
+    }
+
+    match /priceAlerts/{id} {
+      allow read: if l2();
+      allow update: if l2() && onlyChanges(['acknowledged']);
+    }
+
+    match /items/{id} { allow read: if l1(); allow write: if l2(); }
+    match /vendors/{id} { allow read: if l1(); allow write: if l2(); }
+    // Drive folder link + connection status (written only by Cloud Functions).
+    match /settings/{id} { allow read: if l1(); allow write: if false; }
+    // Google refresh token and OAuth state: never readable from the app.
+    match /private/{id} { allow read, write: if false; }
+    // Future: recipe / SOP quantities per menu item, for consumption and P&L.
+    match /recipes/{id} { allow read: if l1(); allow write: if l3(); }
+  }
+}
