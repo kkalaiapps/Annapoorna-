@@ -40,13 +40,13 @@ Amounts are in SGD. GST in Singapore is 9%.
 Photos are taken on a phone: they may be POS thermal printouts, supplier invoices / delivery orders, or handwritten sheets (English, sometimes Tamil words for ingredients - translate item names to English and keep the original in the note).
 Several photos can be pages of the same document; combine them into one result and do not repeat lines.
 
-Handwritten marks next to a line matter. Staff write them when checking a delivery:
-- a cross, "X", "NA", "not received", "nil", or the quantity struck out -> status "not_delivered"
+Handwritten notes on the printout matter. Staff write them by hand on the bill when checking a delivery, to mark items that were not delivered, missed, short, or need to be replaced because of poor quality. Read each handwritten note and classify the line it refers to:
+- not received, missed, nil, NA, a cross, or the quantity struck out -> status "not_delivered"
 - a corrected lower quantity, "short", "only N" -> status "short_delivered" and use the delivered quantity, put the original in the note
-- "b", "B", "bad", "replace", "R", "exchange", "rotten", "damaged" -> status "to_replace"
-- "return", "RTN" -> status "returned"
-- a tick or nothing -> status "ok"
-Always copy the mark itself into the line's note. If a mark is unclear, keep status "ok", put the mark in the note and add a warning.
+- bad, rotten, damaged, spoilt, replace, exchange, poor quality -> status "to_replace"
+- return, RTN -> status "returned"
+- a tick or no note -> status "ok"
+Always copy the handwritten note itself into the line's note. If a note is unclear, keep status "ok", put the mark in the note and add a warning.
 
 Never invent numbers. Use null for anything you cannot read and add a warning. Check that quantity x unit price matches the line amount and that lines add up to the total; if not, add a warning.`;
 

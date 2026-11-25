@@ -23,7 +23,7 @@ New Google sign-ins wait as "pending" until the admin approves them. The admin c
 3. **Read (automatic)**: the same function sends the photos to Claude, which returns structured data:
    - vendor, invoice number, date, GST and total
    - each line: item, qty, unit, unit price, amount, status, and the handwritten note
-   - line status comes from handwritten marks: `X`/`NA` means **not delivered**; a corrected qty means **short delivered**; `b`/`bad`/`R`/`replace` means **to replace (quality)**; `RTN` means **returned**. Lines that aren't delivered are left out of "items bought".
+   - line status comes from the handwritten notes staff write on the printout: not received / missed / `X` means **not delivered**; a corrected qty means **short delivered**; bad / damaged / replace means **to replace (quality)**; `RTN` means **returned**. Lines that aren't delivered are left out of "items bought".
    - sales reports also get the payment-mode breakdown (Cash, NETS, GrabFood …)
    - warnings for anything unreadable or totals that don't add up
 4. **Price check (automatic)**: each vendor-bill line is compared with the **last verified** unit price from the same vendor for the same item. Any change creates an alert (🔔 badge for Level 2/3).
